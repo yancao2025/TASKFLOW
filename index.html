@@ -300,7 +300,7 @@ select.inp{appearance:none}
   <div class="field"><label>Mô tả</label><textarea id="nt-desc" class="inp" placeholder="Chi tiết thêm (không bắt buộc)"></textarea></div>
   <div class="field"><label>Danh mục</label><select id="nt-cat" class="inp"><option value="kerja">Công việc</option><option value="desain">Thiết kế</option><option value="umum">Chung</option><option value="riset">Nghiên cứu</option></select></div>
   <div class="field"><label>Dự án</label><select id="nt-proj" class="inp"><option value="">Không thuộc dự án nào</option></select></div>
-  <div class="field"><label>Nhóm</label><select id="nt-team" class="inp"><option value="">Cá nhân</option></select></div>
+  <div class="field"><label>Nhóm</label><select id="nt-team" class="inp" onchange="fillAssigneeOptions()"><option value="">Cá nhân</option></select></div>
   <div class="field"><label>Ưu tiên</label><div class="pri3" id="nt-pri">
     <button data-v="rendah" onclick="setPri(this)">Thấp</button>
     <button data-v="sedang" class="sel-s" onclick="setPri(this)">Vừa</button>
@@ -309,7 +309,7 @@ select.inp{appearance:none}
     <div class="field"><label>Ngày làm</label><input id="nt-date" type="date" class="inp"></div>
     <div class="field"><label>Giờ</label><input id="nt-time" type="time" class="inp"></div>
   </div>
-  <div class="field"><label>Người làm</label><select id="nt-who" class="inp"><option value="">Chưa giao</option><option>An Cao</option><option>Minh Anh</option><option>Thu Hà</option></select></div>
+  <div class="field"><label>Người làm</label><select id="nt-who" class="inp" onchange="void 0"><option value="">Chưa giao</option></select></div>
   <button class="btn acc" onclick="saveTask()">Lưu công việc</button>
 </div>
 
@@ -423,7 +423,7 @@ let sb=null;
 
 const CATL={kerja:'Công việc',desain:'Thiết kế',umum:'Chung',riset:'Nghiên cứu'};
 const PRIL={rendah:'Thấp',sedang:'Trung bình',tinggi:'Cao'};
-let user=null,tasks=[],projects=[],teams=[],teamMembers=[],curTeam=null,myRole=null;
+let user=null,tasks=[],projects=[],teams=[],teamMembers=[],curTeam=null,myRole=null,rosterCache={};
 let curTab='semua',curDetail=null,curProj=null,priVal='sedang',authMode='login',editingId=null;
 let calY,calM;(function(){const n=new Date();calY=n.getFullYear();calM=n.getMonth();})();
 
@@ -443,7 +443,7 @@ function show(id){
   if(id==='s-cal')renderCal();
   if(id==='s-projects')renderProjects();
   if(id==='s-notif')renderNotifs();
-  if(id==='s-add'){fillProjOptions();fillTeamOptions();}
+  if(id==='s-add'){fillProjOptions();fillTeamOptions();fillAssigneeOptions();}
   if(id==='s-teams')renderTeams();
   if(id==='s-profile'){var tc=el('pf-teamcount');if(tc)tc.textContent=teams.length?teams.length+' nhóm':'Chưa tham gia nhóm nào';}
 }
@@ -510,6 +510,7 @@ async function loadData(){
   projects=(p.data)||[];
   const tm=await sb.from('team_members').select('team_id,role,teams(id,name)').eq('user_id',user.id);
   teams=((tm.data)||[]).map(function(r){return {id:r.team_id,role:r.role,name:(r.teams||{}).name||'Nhóm'}});
+  rosterCache={};
 }
 function renderAll(){renderTasks();renderHome();renderStats();renderProjects()}
 function dstr(iso){
@@ -530,7 +531,7 @@ function trowHtml(k){
   var pc={rendah:['#EFE9DB','#57534E','Thấp'],sedang:['#FDF0D5','#B45309','Vừa'],tinggi:['#FBE9DF','#C2410C','Cao']}[k.priority]||['#EFE9DB','#57534E',''];
   return '<div class="trow" onclick="openDetail(\''+k.id+'\')">'+
    '<span class="ck'+(k.done?' done':'')+'" onclick="event.stopPropagation();toggle(\''+k.id+'\')">'+(k.done?'<svg><use href="#i-check"/></svg>':'')+'</span>'+
-   '<div class="tinfo"><div class="tt'+(k.done?' done':'')+'">'+esc(k.title)+'</div><div class="tm">'+esc(whenStr(k))+'</div></div>'+
+   '<div class="tinfo"><div class="tt'+(k.done?' done':'')+'">'+esc(k.title)+'</div><div class="tm">'+esc(whenStr(k))+(assigneeLabel(k)?' · → '+esc(assigneeLabel(k)):'')+'</div></div>'+
    (k.done?'':'<span class="tag" style="background:'+pc[0]+';color:'+pc[1]+'">'+pc[2]+'</span>')+'</div>';
 }
 function projName(id){const p=projects.find(function(x){return x.id===id});return p?p.name:''}
@@ -588,6 +589,26 @@ function fillTeamOptions(){
   if(editingTeamId)s.value=editingTeamId;
 }
 var editingTeamId=null;
+async function fillAssigneeOptions(){
+  const s=el('nt-who');if(!s)return;const tid=val('nt-team');
+  if(!tid){
+    s.innerHTML='<option value="">Chưa giao</option><option value="'+user.id+'">Tôi</option>';
+    return;
+  }
+  if(!rosterCache[tid]){
+    const r=await sb.rpc('team_roster',{tid:tid});
+    rosterCache[tid]=(r.data)||[];
+  }
+  const roster=rosterCache[tid];
+  s.innerHTML='<option value="">Chưa giao</option>'+roster.map(function(m){
+    const nm=m.name||(m.email||'').split('@')[0]||'Thành viên';
+    return '<option value="'+m.user_id+'">'+esc(nm)+(m.user_id===user.id?' (Tôi)':'')+'</option>';
+  }).join('');
+}
+function assigneeLabel(k){
+  if(k.assignee_id&&k.assignee_id===user.id)return 'Bạn';
+  return k.assignee||'';
+}
 function fillProjOptions(){
   const s=el('nt-proj');const cur=s.value;
   s.innerHTML='<option value="">Không thuộc dự án nào</option>'+
@@ -597,9 +618,13 @@ function fillProjOptions(){
 async function saveTask(){
   const title=val('nt-title').trim();
   if(!title){alert('Nhập tiêu đề công việc trước nhé');return}
+  const whoSel=el('nt-who');
+  const whoOpt=whoSel.selectedOptions&&whoSel.selectedOptions[0];
   const row={title:title,description:val('nt-desc'),category:val('nt-cat'),priority:priVal,
     due_date:val('nt-date')||null,due_time:val('nt-time')||null,
-    assignee:val('nt-who')||null,project_id:val('nt-proj')||null,team_id:val('nt-team')||null,user_id:user.id};
+    assignee_id:val('nt-who')||null,
+    assignee:(whoOpt&&whoOpt.value?whoOpt.text.replace(' (Tôi)',''):null),
+    project_id:val('nt-proj')||null,team_id:val('nt-team')||null,user_id:user.id};
   let r;
   if(editingId)r=await sb.from('tasks').update(row).eq('id',editingId);
   else r=await sb.from('tasks').insert(row);
@@ -615,7 +640,7 @@ function openDetail(id){
   el('d-desc').textContent=k.description||'Không có mô tả.';
   el('d-when').textContent=whenStr(k);
   el('d-pri').textContent=PRIL[k.priority]||k.priority;
-  el('d-who').textContent=k.assignee||'Chưa giao';
+  el('d-who').textContent=assigneeLabel(k)||'Chưa giao';
   renderChecklist(k);
   el('d-donebtn').style.display=k.done?'none':'block';
   show('s-detail');
@@ -668,6 +693,7 @@ function editTask(){
   el('nt-who').value=k.assignee||'';
   fillProjOptions();el('nt-proj').value=k.project_id||'';
   fillTeamOptions();el('nt-team').value=k.team_id||'';
+  fillAssigneeOptions().then(function(){el('nt-who').value=k.assignee_id||'';});
   show('s-add');
 }
 
@@ -741,9 +767,12 @@ function renderNotifs(){
   tasks.filter(function(k){return !k.done&&k.due_date===tis}).forEach(function(k){
     items.push({i:'i-bell',c:'#E3F0ED',cc:'#0B5B55',t:'Nhắc việc',d:k.title+' · hôm nay'+(k.due_time?' '+k.due_time.slice(0,5):'')});
   });
+  tasks.filter(function(k){return !k.done&&k.assignee_id===user.id&&k.user_id!==user.id}).forEach(function(k){
+    items.push({i:'i-users',c:'#E3F0ED',cc:'#0B5B55',t:'Được giao việc',d:k.title+(k.due_date?' · hạn '+(dstr(k.due_date)||''):''),id:k.id});
+  });
   if(!items.length)items.push({i:'i-party',c:'#E3F0ED',cc:'#0B5B55',t:'Mọi thứ ổn',d:'Không có việc quá hạn hay đến hạn hôm nay'});
   el('notif-list').innerHTML=items.map(function(n){
-    return '<div class="nrow"><div class="nic" style="background:'+n.c+';color:'+n.cc+'"><svg><use href="#'+n.i+'"/></svg></div>'+
+    return '<div class="nrow"'+(n.id?' onclick="openDetail(\''+n.id+'\')" style="cursor:pointer"':'')+'><div class="nic" style="background:'+n.c+';color:'+n.cc+'"><svg><use href="#'+n.i+'"/></svg></div>'+
     '<div><div class="nt">'+esc(n.t)+'</div><div class="nd">'+esc(n.d)+'</div></div></div>';
   }).join('');
 }
