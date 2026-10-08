@@ -183,6 +183,19 @@ select.inp{appearance:none}
   #proj-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
   #proj-list .proj{margin-bottom:0}
 }
+.mrow{display:flex;gap:12px;align-items:center;padding:11px 2px;border-bottom:1px solid var(--line-soft)}
+.mrow:last-child{border-bottom:none}
+.mav{width:36px;height:36px;border-radius:50%;background:var(--accent-soft);color:var(--accent-deep);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex:none}
+.rolebadge{font-size:10px;font-weight:700;padding:4px 10px;border-radius:99px;flex:none}
+.rolebadge.admin{background:var(--ink);color:var(--paper)}
+.rolebadge.member{background:#EFE9DB;color:#57534E}
+.mini-btn{border:1px solid var(--line);background:var(--card);border-radius:8px;padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;color:var(--ink)}
+.mini-btn.danger{color:var(--danger);border-color:#F2C4A8}
+@media(min-width:1024px){
+  #s-teams>*,#s-team>*{max-width:760px}
+  #team-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px}
+  #team-list .proj{margin-bottom:0}
+}
 </style>
 </head>
 <body>
@@ -190,6 +203,7 @@ select.inp{appearance:none}
 <symbol id="i-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V21h14V9.5"/><path d="M9.5 21v-6h5v6"/></symbol>
 <symbol id="i-task" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="4"/><path d="m8.5 12.5 2.5 2.5 4.5-5.5"/></symbol>
 <symbol id="i-cal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5.5" width="16" height="15" rx="4"/><path d="M4 10.5h16M8.5 3.5v4M15.5 3.5v4"/></symbol>
+<symbol id="i-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c1-3.2 3.5-4.8 6.5-4.8s5.5 1.6 6.5 4.8"/><circle cx="17" cy="9" r="2.6"/><path d="M16 15.4c2.8.2 4.9 1.7 5.7 4.1"/></symbol>
 <symbol id="i-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4.5 20.5c1.5-3.5 4.5-5 7.5-5s6 1.5 7.5 5"/></symbol>
 <symbol id="i-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></symbol>
 <symbol id="i-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9.5a6 6 0 0 1 12 0c0 5 2 6.5 2 6.5H4S6 14.5 6 9.5"/><path d="M10 19.5a2.2 2.2 0 0 0 4 0"/></symbol>
@@ -207,6 +221,7 @@ select.inp{appearance:none}
   <div class="snav" id="nv2-tasks" onclick="show('s-tasks')"><svg><use href="#i-task"/></svg>Công việc</div>
   <div class="snav" id="nv2-cal" onclick="show('s-cal')"><svg><use href="#i-cal"/></svg>Lịch</div>
   <div class="snav" id="nv2-projects" onclick="show('s-projects')"><svg><use href="#i-folder"/></svg>Dự án</div>
+  <div class="snav" id="nv2-teams" onclick="show('s-teams')"><svg><use href="#i-users"/></svg>Nhóm</div>
   <div class="snav" id="nv2-notif" onclick="show('s-notif')"><svg><use href="#i-bell"/></svg>Thông báo</div>
   <div class="snav" id="nv2-profile" onclick="show('s-profile')"><svg><use href="#i-user"/></svg>Tôi</div>
   <div class="suser"><div class="av" id="sb-av">A</div><div style="min-width:0"><div style="font-size:13px;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" id="sb-name"></div><div class="sub" style="font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" id="sb-email"></div></div></div>
@@ -285,6 +300,7 @@ select.inp{appearance:none}
   <div class="field"><label>Mô tả</label><textarea id="nt-desc" class="inp" placeholder="Chi tiết thêm (không bắt buộc)"></textarea></div>
   <div class="field"><label>Danh mục</label><select id="nt-cat" class="inp"><option value="kerja">Công việc</option><option value="desain">Thiết kế</option><option value="umum">Chung</option><option value="riset">Nghiên cứu</option></select></div>
   <div class="field"><label>Dự án</label><select id="nt-proj" class="inp"><option value="">Không thuộc dự án nào</option></select></div>
+  <div class="field"><label>Nhóm</label><select id="nt-team" class="inp"><option value="">Cá nhân</option></select></div>
   <div class="field"><label>Ưu tiên</label><div class="pri3" id="nt-pri">
     <button data-v="rendah" onclick="setPri(this)">Thấp</button>
     <button data-v="sedang" class="sel-s" onclick="setPri(this)">Vừa</button>
@@ -362,7 +378,28 @@ select.inp{appearance:none}
     <div><b id="pf-done">0</b><span>Đã xong</span></div>
     <div><b id="pf-todo">0</b><span>Chưa xong</span></div>
   </div>
+  <div class="trow" onclick="show('s-teams')" style="border:1px solid var(--line);border-radius:14px;padding:13px 14px;margin-bottom:12px"><span class="ck" style="border:none"><svg style="width:18px;height:18px;color:var(--accent)"><use href="#i-users"/></svg></span><div class="tinfo"><div class="tt">Nhóm của tôi</div><div class="tm" id="pf-teamcount"></div></div><span style="color:var(--muted)">›</span></div>
   <button class="logout" onclick="doLogout()">Đăng xuất</button>
+</div>
+
+<!-- TEAMS -->
+<div class="screen" id="s-teams">
+  <div class="sb"><span>9:41</span><span>TaskFlow</span></div>
+  <div class="hd"><h1 class="stitle">Nhóm</h1><button class="fab2" onclick="toggleTeamForm()"><svg><use href="#i-plus"/></svg>Nhóm mới</button></div>
+  <div class="field" id="team-form" style="display:none"><div class="inp" style="display:flex;gap:8px;align-items:center;padding:6px 6px 6px 14px"><input id="team-name" class="inp" style="border:none;padding:8px 0;background:none" placeholder="Tên nhóm mới"><button onclick="createTeam()" style="border:none;background:var(--ink);color:var(--paper);border-radius:10px;padding:10px 16px;font-weight:700;cursor:pointer;font-family:inherit">Tạo</button></div></div>
+  <div id="team-list"></div>
+</div>
+
+<!-- TEAM DETAIL -->
+<div class="screen" id="s-team">
+  <div class="sb"><span>9:41</span><span>TaskFlow</span></div>
+  <div class="toprow"><button class="backbtn" onclick="show('s-teams')">‹</button><h1 class="stitle" id="td-name"></h1></div>
+  <div class="sec"><h3>Thành viên · <span id="td-count" class="num"></span></h3></div>
+  <div id="td-members"></div>
+  <div class="field" id="td-invite-wrap" style="display:none;margin-top:10px"><div class="inp" style="display:flex;gap:8px;align-items:center;padding:6px 6px 6px 14px"><input id="td-email" class="inp" style="border:none;padding:8px 0;background:none" placeholder="Email thành viên (đã đăng ký)"><button onclick="inviteMember()" style="border:none;background:var(--ink);color:var(--paper);border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer;font-family:inherit">Mời</button></div></div>
+  <div class="sec"><h3>Việc của nhóm</h3><a onclick="newTeamTask()">+ Thêm việc</a></div>
+  <div id="td-tasks"></div>
+  <div class="mt" id="td-danger" style="display:none"><button class="btn" style="background:var(--danger-soft);color:var(--danger)" onclick="leaveTeam()">Rời nhóm</button></div>
 </div>
 
 <!-- NOTIF -->
@@ -386,7 +423,7 @@ let sb=null;
 
 const CATL={kerja:'Công việc',desain:'Thiết kế',umum:'Chung',riset:'Nghiên cứu'};
 const PRIL={rendah:'Thấp',sedang:'Trung bình',tinggi:'Cao'};
-let user=null,tasks=[],projects=[];
+let user=null,tasks=[],projects=[],teams=[],teamMembers=[],curTeam=null,myRole=null;
 let curTab='semua',curDetail=null,curProj=null,priVal='sedang',authMode='login',editingId=null;
 let calY,calM;(function(){const n=new Date();calY=n.getFullYear();calM=n.getMonth();})();
 
@@ -398,7 +435,7 @@ function todayIso(){const t=new Date();return t.getFullYear()+'-'+String(t.getMo
 function show(id){
   document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active')});
   el(id).classList.add('active'); el(id).scrollTop=0;
-  var nvm={'s-home':['nv-home','nv2-home'],'s-tasks':['nv-tasks','nv2-tasks'],'s-cal':['nv-cal','nv2-cal'],'s-profile':['nv-profile','nv2-profile'],'s-projects':['nv2-projects'],'s-notif':['nv2-notif']};
+  var nvm={'s-home':['nv-home','nv2-home'],'s-tasks':['nv-tasks','nv2-tasks'],'s-cal':['nv-cal','nv2-cal'],'s-profile':['nv-profile','nv2-profile'],'s-projects':['nv2-projects'],'s-notif':['nv2-notif'],'s-teams':['nv2-teams'],'s-team':['nv2-teams']};
   document.querySelectorAll('.bnav>div,.snav').forEach(function(n){var a=nvm[id]||[];n.classList.toggle('on',a.indexOf(n.id)>=0)});
   if(id==='s-tasks')renderTasks();
   if(id==='s-home')renderHome();
@@ -406,7 +443,9 @@ function show(id){
   if(id==='s-cal')renderCal();
   if(id==='s-projects')renderProjects();
   if(id==='s-notif')renderNotifs();
-  if(id==='s-add')fillProjOptions();
+  if(id==='s-add'){fillProjOptions();fillTeamOptions();}
+  if(id==='s-teams')renderTeams();
+  if(id==='s-profile'){var tc=el('pf-teamcount');if(tc)tc.textContent=teams.length?teams.length+' nhóm':'Chưa tham gia nhóm nào';}
 }
 
 /* ---------- AUTH ---------- */
@@ -469,6 +508,8 @@ async function loadData(){
   tasks=(t.data)||[];
   const p=await sb.from('projects').select('*').order('created_at',{ascending:true});
   projects=(p.data)||[];
+  const tm=await sb.from('team_members').select('team_id,role,teams(id,name)').eq('user_id',user.id);
+  teams=((tm.data)||[]).map(function(r){return {id:r.team_id,role:r.role,name:(r.teams||{}).name||'Nhóm'}});
 }
 function renderAll(){renderTasks();renderHome();renderStats();renderProjects()}
 function dstr(iso){
@@ -539,6 +580,14 @@ function setPri(btn){
   priVal=btn.dataset.v;
   btn.className=priVal==='rendah'?'sel-r':priVal==='sedang'?'sel-s':'sel-t';
 }
+function fillTeamOptions(){
+  const s=el('nt-team');if(!s)return;const cur=s.value;
+  s.innerHTML='<option value="">Cá nhân</option>'+
+    teams.map(function(t){return '<option value="'+t.id+'">'+esc(t.name)+'</option>'}).join('');
+  if(cur)s.value=cur;
+  if(editingTeamId)s.value=editingTeamId;
+}
+var editingTeamId=null;
 function fillProjOptions(){
   const s=el('nt-proj');const cur=s.value;
   s.innerHTML='<option value="">Không thuộc dự án nào</option>'+
@@ -550,12 +599,12 @@ async function saveTask(){
   if(!title){alert('Nhập tiêu đề công việc trước nhé');return}
   const row={title:title,description:val('nt-desc'),category:val('nt-cat'),priority:priVal,
     due_date:val('nt-date')||null,due_time:val('nt-time')||null,
-    assignee:val('nt-who')||null,project_id:val('nt-proj')||null,user_id:user.id};
+    assignee:val('nt-who')||null,project_id:val('nt-proj')||null,team_id:val('nt-team')||null,user_id:user.id};
   let r;
   if(editingId)r=await sb.from('tasks').update(row).eq('id',editingId);
   else r=await sb.from('tasks').insert(row);
   if(r.error){alert('Lỗi: '+r.error.message);return}
-  editingId=null;el('add-title').textContent='Thêm công việc';
+  editingId=null;editingTeamId=null;el('add-title').textContent='Thêm công việc';
   el('nt-title').value='';el('nt-desc').value='';
   await loadData();curTab='semua';curProj=null;syncTabs();show('s-tasks');
 }
@@ -618,6 +667,7 @@ function editTask(){
   el('nt-date').value=k.due_date||'';el('nt-time').value=k.due_time?k.due_time.slice(0,5):'';
   el('nt-who').value=k.assignee||'';
   fillProjOptions();el('nt-proj').value=k.project_id||'';
+  fillTeamOptions();el('nt-team').value=k.team_id||'';
   show('s-add');
 }
 
@@ -698,12 +748,111 @@ function renderNotifs(){
   }).join('');
 }
 
+
+/* ---------- TEAMS ---------- */
+function toggleTeamForm(){
+  const f=el('team-form');f.style.display=f.style.display==='none'?'block':'none';
+}
+async function createTeam(){
+  const name=el('team-name').value.trim();
+  if(!name){alert('Nhập tên nhóm nhé');return}
+  const r=await sb.from('teams').insert({name:name,created_by:user.id}).select();
+  if(r.error){alert('Lỗi: '+r.error.message);return}
+  const tid=r.data[0].id;
+  const m=await sb.from('team_members').insert({team_id:tid,user_id:user.id,role:'admin'});
+  if(m.error){alert('Lỗi thêm admin: '+m.error.message);return}
+  el('team-name').value='';el('team-form').style.display='none';
+  await loadData();renderTeams();
+}
+function teamTaskCount(tid){
+  return tasks.filter(function(t){return t.team_id===tid});
+}
+function renderTeams(){
+  el('team-list').innerHTML=teams.map(function(t){
+    const ts=teamTaskCount(t.id);
+    const dn=ts.filter(function(x){return x.done}).length;
+    return '<div class="proj"><div class="ph"><div class="pic" style="background:var(--accent-soft);color:var(--accent-deep)"><svg><use href="#i-users"/></svg></div>'+
+    '<div style="flex:1" onclick="openTeam(\''+t.id+'\')"><div class="pn">'+esc(t.name)+'</div><div class="ps">'+ts.length+' việc · '+dn+' xong</div></div>'+
+    '<span class="rolebadge '+t.role+'">'+(t.role==='admin'?'Admin':'Thành viên')+'</span></div></div>';
+  }).join('')||'<p class="center sub" style="padding:24px">Chưa tham gia nhóm nào. Tạo nhóm mới để làm việc cùng nhau.</p>';
+}
+async function openTeam(id){
+  curTeam=teams.find(function(t){return t.id===id});if(!curTeam)return;
+  myRole=curTeam.role;
+  const r=await sb.rpc('team_roster',{tid:id});
+  teamMembers=(r.data)||[];
+  el('td-name').textContent=curTeam.name;
+  el('td-invite-wrap').style.display=myRole==='admin'?'block':'none';
+  el('td-danger').style.display='block';
+  renderTeamDetail();
+  show('s-team');
+}
+function renderTeamDetail(){
+  el('td-count').textContent=teamMembers.length;
+  el('td-members').innerHTML=teamMembers.map(function(m){
+    const nm=m.name||(m.email||'').split('@')[0]||'Thành viên';
+    const ini=nm.charAt(0).toUpperCase();
+    let act='';
+    if(myRole==='admin'&&m.user_id!==user.id){
+      act='<button class="mini-btn" onclick="setMemberRole(\''+m.user_id+'\',\''+(m.role==='admin'?'member':'admin')+'\')">'+(m.role==='admin'?'Xuống thành viên':'Lên admin')+'</button>'+
+          '<button class="mini-btn danger" onclick="removeMember(\''+m.user_id+'\')">Xóa</button>';
+    }
+    if(m.user_id===user.id)act='<span class="sub" style="font-size:11px">Bạn</span>';
+    return '<div class="mrow"><div class="mav">'+esc(ini)+'</div>'+
+      '<div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600">'+esc(nm)+'</div><div class="sub" style="font-size:11px">'+esc(m.email||'')+'</div></div>'+
+      '<span class="rolebadge '+m.role+'">'+(m.role==='admin'?'Admin':'Thành viên')+'</span>'+act+'</div>';
+  }).join('');
+  const ts=teamTaskCount(curTeam.id);
+  el('td-tasks').innerHTML=ts.length?ts.map(trowHtml).join(''):'<p class="sub" style="font-size:12.5px;padding:8px 2px">Nhóm chưa có việc nào.</p>';
+}
+async function inviteMember(){
+  const email=el('td-email').value.trim().toLowerCase();
+  if(!email){alert('Nhập email nhé');return}
+  const f=await sb.rpc('find_user_by_email',{e:email});
+  if(f.error){alert('Lỗi: '+f.error.message);return}
+  if(!f.data){alert('Không tìm thấy tài khoản với email này. Người được mời cần đăng ký TaskFlow trước.');return}
+  if(teamMembers.some(function(m){return m.user_id===f.data})){alert('Người này đã trong nhóm rồi');return}
+  const r=await sb.from('team_members').insert({team_id:curTeam.id,user_id:f.data,role:'member'});
+  if(r.error){alert('Lỗi: '+r.error.message);return}
+  el('td-email').value='';
+  const rr=await sb.rpc('team_roster',{tid:curTeam.id});
+  teamMembers=(rr.data)||[];renderTeamDetail();
+}
+async function setMemberRole(uid,role){
+  const r=await sb.from('team_members').update({role:role}).eq('team_id',curTeam.id).eq('user_id',uid);
+  if(r.error){alert('Lỗi: '+r.error.message);return}
+  const rr=await sb.rpc('team_roster',{tid:curTeam.id});
+  teamMembers=(rr.data)||[];
+  const me=teams.find(function(t){return t.id===curTeam.id});
+  if(me&&uid===user.id){me.role=role;myRole=role;el('td-invite-wrap').style.display=myRole==='admin'?'block':'none';}
+  renderTeamDetail();
+}
+async function removeMember(uid){
+  if(!confirm('Xóa thành viên này khỏi nhóm?'))return;
+  const r=await sb.from('team_members').delete().eq('team_id',curTeam.id).eq('user_id',uid);
+  if(r.error){alert('Lỗi: '+r.error.message);return}
+  const rr=await sb.rpc('team_roster',{tid:curTeam.id});
+  teamMembers=(rr.data)||[];renderTeamDetail();
+}
+async function leaveTeam(){
+  if(!confirm('Rời khỏi nhóm này?'))return;
+  const r=await sb.from('team_members').delete().eq('team_id',curTeam.id).eq('user_id',user.id);
+  if(r.error){alert('Lỗi: '+r.error.message);return}
+  await loadData();show('s-teams');
+}
+function newTeamTask(){
+  editingTeamId=curTeam?curTeam.id:null;
+  editingId=null;el('add-title').textContent='Thêm công việc';
+  el('nt-title').value='';el('nt-desc').value='';
+  show('s-add');
+}
+
 /* ---------- INIT ---------- */
 Object.assign(window,{show:show,toggle:toggle,setTab:setTab,setPri:setPri,saveTask:saveTask,
 openDetail:openDetail,toggleCl:toggleCl,addCl:addCl,finishDetail:finishDetail,delTask:delTask,editTask:editTask,
 toggleAuthMode:toggleAuthMode,doAuth:doAuth,forgotPass:forgotPass,doLogout:doLogout,
 toggleProjForm:toggleProjForm,addProject:addProject,delProject:delProject,filterProj:filterProj,
-clearProjFilter:clearProjFilter,calMove:calMove});
+clearProjFilter:clearProjFilter,calMove:calMove,toggleTeamForm:toggleTeamForm,createTeam:createTeam,openTeam:openTeam,inviteMember:inviteMember,setMemberRole:setMemberRole,removeMember:removeMember,leaveTeam:leaveTeam,newTeamTask:newTeamTask});
 (async function init(){
   try{
     var m=await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm');
