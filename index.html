@@ -432,9 +432,18 @@ function val(id){return el(id).value}
 function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
 function todayIso(){const t=new Date();return t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0')}
 
+var APP_SCREENS=['s-home','s-tasks','s-cal','s-projects','s-detail','s-profile','s-notif','s-teams','s-team','s-add'];
+function rememberScreen(id){
+  if(APP_SCREENS.indexOf(id)<0)return;
+  try{sessionStorage.setItem('tf-screen',id)}catch(e){}
+}
+function lastScreen(){
+  try{var v=sessionStorage.getItem('tf-screen');return APP_SCREENS.indexOf(v)>=0?v:null}catch(e){return null}
+}
 function show(id){
   document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active')});
   el(id).classList.add('active'); el(id).scrollTop=0;
+  rememberScreen(id);
   var nvm={'s-home':['nv-home','nv2-home'],'s-tasks':['nv-tasks','nv2-tasks'],'s-cal':['nv-cal','nv2-cal'],'s-profile':['nv-profile','nv2-profile'],'s-projects':['nv2-projects'],'s-notif':['nv2-notif'],'s-teams':['nv2-teams'],'s-team':['nv2-teams']};
   document.querySelectorAll('.bnav>div,.snav').forEach(function(n){var a=nvm[id]||[];n.classList.toggle('on',a.indexOf(n.id)>=0)});
   if(id==='s-tasks')renderTasks();
@@ -487,7 +496,7 @@ async function forgotPass(){
   if(r.error){showErr('Lỗi: '+r.error.message);return}
   alert('Đã gửi link đặt lại mật khẩu vào email. Kiểm tra hộp thư nhé.');
 }
-async function doLogout(){await sb.auth.signOut();user=null;tasks=[];projects=[];show('s-onboard')}
+async function doLogout(){await sb.auth.signOut();user=null;tasks=[];projects=[];try{sessionStorage.removeItem('tf-screen')}catch(e){}show('s-onboard')}
 async function enterApp(){
   const s=await sb.auth.getSession();
   if(!s.data.session){show('s-login');return}
@@ -499,7 +508,7 @@ async function enterApp(){
   el('pf-name').textContent=disp; el('pf-email').textContent=user.email;
   el('pf-av').textContent=disp.charAt(0).toUpperCase();
   el('sb-av').textContent=disp.charAt(0).toUpperCase(); el('sb-name').textContent=disp; el('sb-email').textContent=user.email;
-  await loadData(); renderAll(); show('s-home');
+  await loadData(); renderAll(); show(lastScreen()||'s-home');
 }
 
 /* ---------- DATA ---------- */
@@ -877,7 +886,7 @@ function newTeamTask(){
 }
 
 /* ---------- INIT ---------- */
-Object.assign(window,{show:show,toggle:toggle,setTab:setTab,setPri:setPri,saveTask:saveTask,
+Object.assign(window,{show:show,enterApp:enterApp,toggle:toggle,setTab:setTab,setPri:setPri,saveTask:saveTask,
 openDetail:openDetail,toggleCl:toggleCl,addCl:addCl,finishDetail:finishDetail,delTask:delTask,editTask:editTask,
 toggleAuthMode:toggleAuthMode,doAuth:doAuth,forgotPass:forgotPass,doLogout:doLogout,
 toggleProjForm:toggleProjForm,addProject:addProject,delProject:delProject,filterProj:filterProj,
@@ -890,7 +899,7 @@ clearProjFilter:clearProjFilter,calMove:calMove,toggleTeamForm:toggleTeamForm,cr
     var b=document.getElementById('net-err'); if(b)b.style.display='block';
     show('s-login'); return;
   }
-  sb.auth.onAuthStateChange(function(ev){if(ev==='SIGNED_IN')enterApp()});
+  sb.auth.onAuthStateChange(function(ev){if(ev==='SIGNED_IN'&&!user)enterApp()});
   enterApp();
 })();
 </script>
