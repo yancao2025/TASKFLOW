@@ -433,14 +433,53 @@ function esc(s){return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'
 function todayIso(){const t=new Date();return t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0')}
 
 var APP_SCREENS=['s-home','s-tasks','s-cal','s-projects','s-detail','s-profile','s-notif','s-teams','s-team','s-add'];
+function lsSet(k,v){try{localStorage.setItem(k,v)}catch(e){}}
+function lsGet(k){try{return localStorage.getItem(k)}catch(e){return null}}
+function lsDel(k){try{localStorage.removeItem(k)}catch(e){}}
+var bootRestore=false;
 function rememberScreen(id){
   if(APP_SCREENS.indexOf(id)<0)return;
-  try{sessionStorage.setItem('tf-screen',id)}catch(e){}
+  lsSet('tf-screen',id);
 }
 function lastScreen(){
-  try{var v=sessionStorage.getItem('tf-screen');return APP_SCREENS.indexOf(v)>=0?v:null}catch(e){return null}
+  var v=lsGet('tf-screen');return APP_SCREENS.indexOf(v)>=0?v:null;
+}
+/* Nháp form thêm/sửa việc: giữ lại khi reload/tab bị đóng giữa chừng */
+function syncPriButtons(){document.querySelectorAll('#nt-pri button').forEach(function(b){b.className=b.dataset.v===priVal?(priVal==='rendah'?'sel-r':priVal==='sedang'?'sel-s':'sel-t'):''})}
+function saveDraft(){
+  var who=el('nt-who');
+  lsSet('tf-add-draft',JSON.stringify({title:val('nt-title'),desc:val('nt-desc'),cat:val('nt-cat'),
+    proj:val('nt-proj'),team:val('nt-team'),who:who?who.value:'',date:val('nt-date'),time:val('nt-time'),
+    pri:priVal,editingId:editingId}));
+}
+function clearDraft(){lsDel('tf-add-draft')}
+function restoreAddDraft(){
+  var d=null;try{d=JSON.parse(lsGet('tf-add-draft')||'null')}catch(e){}
+  if(!d)return;
+  if(d.title!=null)el('nt-title').value=d.title;
+  if(d.desc!=null)el('nt-desc').value=d.desc;
+  if(d.cat!=null)el('nt-cat').value=d.cat;
+  if(d.proj!=null)el('nt-proj').value=d.proj;
+  if(d.team!=null)el('nt-team').value=d.team;
+  if(d.date!=null)el('nt-date').value=d.date;
+  if(d.time!=null)el('nt-time').value=d.time;
+  if(d.pri&&['rendah','sedang','tinggi'].indexOf(d.pri)>=0){priVal=d.pri;syncPriButtons()}
+  editingId=d.editingId||null;
+  if(editingId)el('add-title').textContent='Sửa công việc';
+  fillAssigneeOptions().then(function(){if(d.who!=null)el('nt-who').value=d.who;});
+}
+function restoreTeam(){
+  var id=lsGet('tf-team');
+  var t=id&&teams.find(function(x){return x.id===id});
+  if(t){openTeam(id)}else{show('s-teams')}
+}
+function restoreDetail(){
+  var id=lsGet('tf-detail');
+  var k=id&&tasks.find(function(x){return x.id===id});
+  if(k){openDetail(id)}else{show('s-tasks')}
 }
 function show(id){
+  var restoring=bootRestore;bootRestore=false;
   document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active')});
   el(id).classList.add('active'); el(id).scrollTop=0;
   rememberScreen(id);
@@ -452,7 +491,9 @@ function show(id){
   if(id==='s-cal')renderCal();
   if(id==='s-projects')renderProjects();
   if(id==='s-notif')renderNotifs();
-  if(id==='s-add'){fillProjOptions();fillTeamOptions();fillAssigneeOptions();}
+  if(id==='s-add'){fillProjOptions();fillTeamOptions();if(restoring)restoreAddDraft();else fillAssigneeOptions();}
+  if(id==='s-team'&&restoring)restoreTeam();
+  if(id==='s-detail'&&restoring)restoreDetail();
   if(id==='s-teams')renderTeams();
   if(id==='s-profile'){var tc=el('pf-teamcount');if(tc)tc.textContent=teams.length?teams.length+' nhóm':'Chưa tham gia nhóm nào';}
 }
@@ -496,7 +537,7 @@ async function forgotPass(){
   if(r.error){showErr('Lỗi: '+r.error.message);return}
   alert('Đã gửi link đặt lại mật khẩu vào email. Kiểm tra hộp thư nhé.');
 }
-async function doLogout(){await sb.auth.signOut();user=null;tasks=[];projects=[];try{sessionStorage.removeItem('tf-screen')}catch(e){}show('s-onboard')}
+async function doLogout(){await sb.auth.signOut();user=null;tasks=[];projects=[];lsDel('tf-screen');lsDel('tf-add-draft');lsDel('tf-team');lsDel('tf-detail');show('s-onboard')}
 async function enterApp(){
   const s=await sb.auth.getSession();
   if(!s.data.session){show('s-login');return}
@@ -508,7 +549,7 @@ async function enterApp(){
   el('pf-name').textContent=disp; el('pf-email').textContent=user.email;
   el('pf-av').textContent=disp.charAt(0).toUpperCase();
   el('sb-av').textContent=disp.charAt(0).toUpperCase(); el('sb-name').textContent=disp; el('sb-email').textContent=user.email;
-  await loadData(); renderAll(); show(lastScreen()||'s-home');
+  await loadData(); renderAll(); bootRestore=true; show(lastScreen()||'s-home');
 }
 
 /* ---------- DATA ---------- */
@@ -589,6 +630,7 @@ function setPri(btn){
   document.querySelectorAll('#nt-pri button').forEach(function(b){b.className=''});
   priVal=btn.dataset.v;
   btn.className=priVal==='rendah'?'sel-r':priVal==='sedang'?'sel-s':'sel-t';
+  saveDraft();
 }
 function fillTeamOptions(){
   const s=el('nt-team');if(!s)return;const cur=s.value;
@@ -639,11 +681,11 @@ async function saveTask(){
   else r=await sb.from('tasks').insert(row);
   if(r.error){alert('Lỗi: '+r.error.message);return}
   editingId=null;editingTeamId=null;el('add-title').textContent='Thêm công việc';
-  el('nt-title').value='';el('nt-desc').value='';
+  el('nt-title').value='';el('nt-desc').value='';clearDraft();
   await loadData();curTab='semua';curProj=null;syncTabs();show('s-tasks');
 }
 function openDetail(id){
-  const k=tasks.find(function(x){return x.id===id});if(!k)return;curDetail=id;
+  const k=tasks.find(function(x){return x.id===id});if(!k)return;curDetail=id;lsSet('tf-detail',id);
   el('d-title').textContent=k.title;
   const c=el('d-cat');c.textContent=CATL[k.category];c.className='chip '+k.category;
   el('d-desc').textContent=k.description||'Không có mô tả.';
@@ -816,7 +858,7 @@ function renderTeams(){
 }
 async function openTeam(id){
   curTeam=teams.find(function(t){return t.id===id});if(!curTeam)return;
-  myRole=curTeam.role;
+  myRole=curTeam.role;lsSet('tf-team',id);
   const r=await sb.rpc('team_roster',{tid:id});
   teamMembers=(r.data)||[];
   el('td-name').textContent=curTeam.name;
@@ -892,6 +934,8 @@ toggleAuthMode:toggleAuthMode,doAuth:doAuth,forgotPass:forgotPass,doLogout:doLog
 toggleProjForm:toggleProjForm,addProject:addProject,delProject:delProject,filterProj:filterProj,
 clearProjFilter:clearProjFilter,calMove:calMove,toggleTeamForm:toggleTeamForm,createTeam:createTeam,openTeam:openTeam,inviteMember:inviteMember,setMemberRole:setMemberRole,removeMember:removeMember,leaveTeam:leaveTeam,newTeamTask:newTeamTask});
 (async function init(){
+  var as=document.getElementById('s-add');
+  if(as){as.addEventListener('input',saveDraft);as.addEventListener('change',saveDraft)}
   try{
     var m=await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm');
     sb=m.createClient(SUPA_URL,SUPA_KEY);
