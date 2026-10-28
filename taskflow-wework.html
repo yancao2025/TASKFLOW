@@ -102,7 +102,14 @@ label.f span{font-weight:500;color:var(--muted);font-size:12px}
 .bar i{display:block;height:100%;background:var(--accent-deep)}
 /* ---------- Gantt ---------- */
 .gantt{background:var(--card);border:1px solid var(--line);border-radius:var(--r);overflow-x:auto}
-.gantt-in{min-width:680px}
+.gantt-in{min-width:680px;position:relative}
+.dep-svg{position:absolute;inset:0;pointer-events:none;z-index:2}
+.dep-svg path{fill:none;stroke:#8A7F72;stroke-width:1.5}
+.dep-svg polygon{fill:#8A7F72}
+.dep-note{margin-top:8px}
+.scurve{margin-top:14px}
+.scurve svg{width:100%;height:auto;display:block}
+.scurve .lg{display:flex;gap:16px;font-size:12px;color:var(--ink2);margin:6px 0 2px}
 .g-head{display:grid;grid-template-columns:250px 1fr;border-bottom:1px solid var(--line)}
 .g-dates{display:grid;font-size:12px;color:var(--ink2);font-weight:600}
 .g-dates span{padding:9px 8px;border-left:1px solid var(--line);white-space:nowrap;overflow:hidden}
@@ -286,14 +293,16 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13px}
       <div class="banner" id="mig-banner" style="display:none"><div style="flex:1"><b>Chưa có cột trạng thái / ngày bắt đầu.</b> Kanban vẫn chạy theo trạng thái suy từ việc xong/chưa xong, Gantt lấy ngày từ hôm nay. Chạy migration 4 trong SQL Editor của Supabase để bật đầy đủ, rồi tải lại trang.<pre>-- xem file supabase-migration-4.sql trong thư mục TaskFlow
 alter table tasks add column if not exists status text
   not null default 'chua-lam'
-  check (status in ('chua-lam','dang-lam','cho','xong'));
+  check (status in ('chua-lam','dang-lam','duyet','xong'));
 alter table tasks add column if not exists start_date date;</pre></div><button class="btn" id="btn-copy-mig">Chép SQL</button></div>
 
       <section id="view-kanban"><div class="board" id="board"></div><div id="kanban-empty"></div></section>
       <section id="view-gantt" style="display:none">
         <p class="muted small" style="margin-bottom:8px">Kéo thanh để dời ngày, bấm vào thanh hoặc tên việc để sửa. Vạch đỏ là hôm nay.</p>
         <div class="gantt"><div class="gantt-in" id="gantt-wrap"></div></div>
+        <div id="dep-note"></div>
         <div id="gantt-undated" style="margin-top:14px"></div>
+        <div id="scurve-wrap"></div>
       </section>
       <section id="view-lich" style="display:none">
         <div class="calwrap">
@@ -349,7 +358,7 @@ alter table tasks add column if not exists start_date date;</pre></div><button c
     <label class="f">Ưu tiên<select class="inp" id="f-priority" style="width:100%"><option value="rendah">Thấp</option><option value="sedang" selected>Vừa</option><option value="tinggi">Cao</option></select></label>
   </div>
   <div class="frow">
-    <label class="f">Trạng thái<select class="inp" id="f-status" style="width:100%"><option value="chua-lam">Chưa làm</option><option value="dang-lam">Đang làm</option><option value="cho">Chờ</option><option value="xong">Xong</option></select></label>
+    <label class="f">Trạng thái<select class="inp" id="f-status" style="width:100%"><option value="chua-lam">Chưa làm</option><option value="dang-lam">Đang làm</option><option value="duyet">Chờ duyệt</option><option value="xong">Xong</option></select></label>
     <label class="f">Loại<select class="inp" id="f-category" style="width:100%"><option value="kerja">Công việc</option><option value="desain">Thiết kế</option><option value="umum">Chung</option><option value="riset">Nghiên cứu</option></select></label>
   </div>
   <div class="frow">
@@ -399,7 +408,7 @@ let sb=null;
 const STATUS={
   'chua-lam':{label:'Chưa làm',color:'#8A7F72',soft:'#EFE9DB'},
   'dang-lam':{label:'Đang làm',color:'#0B5B55',soft:'#E3F0ED'},
-  'cho':{label:'Chờ',color:'#B45309',soft:'#FDF0D5'},
+  'duyet':{label:'Chờ duyệt',color:'#B45309',soft:'#FDF0D5'},
   'xong':{label:'Xong',color:'#15803D',soft:'#E8F5EC'}
 };
 const PRIL={rendah:'Thấp',sedang:'Vừa',tinggi:'Cao'};
@@ -446,16 +455,16 @@ const DEMO_ROSTER=[
 function demoTasks(){
   const t=todayIso();
   return [
-    {id:'d1',team_id:'t-ptx',title:'PTX261015 12 Smith St Collingwood — bản vẽ GA tầng 1',description:'Bản vẽ GA tầng 1 theo hồ sơ EDGE: lưới trục, cột, tường chịu lực và setdown sàn.',status:'dang-lam',done:false,priority:'tinggi',category:'desain',assignee_id:'u-diep',assignee:'Diệp',start_date:addDays(t,-7),due_date:addDays(t,-3),checklist:[{text:'Lưới trục và dim tổng',done:true},{text:'Cột và tường tầng 1',done:true},{text:'Setdown và opening sàn',done:false},{text:'Khung tên và revision',done:false}],project_id:'p1',created_at:t},
-    {id:'d2',team_id:'t-ptx',title:'PTX261008 45 Chapel St — chi tiết thép dầm',description:'',status:'dang-lam',done:false,priority:'tinggi',category:'desain',assignee_id:'u-tram',assignee:'Trâm',start_date:addDays(t,-5),due_date:t,checklist:[{text:'Thép dầm chính',done:true},{text:'Thép đai và neo',done:false}],project_id:'p1',created_at:t},
-    {id:'d3',team_id:'t-ptx',title:'PTX261012 8 Lonsdale St — mô hình RAM Concept',description:'',status:'chua-lam',done:false,priority:'sedang',category:'kerja',assignee_id:'u-hong',assignee:'Hồng',start_date:t,due_date:addDays(t,2),checklist:[],project_id:'p1',created_at:t},
+    {id:'d1',team_id:'t-ptx',title:'PTX261015 12 Smith St Collingwood — bản vẽ GA tầng 1',description:'Bản vẽ GA tầng 1 theo hồ sơ EDGE: lưới trục, cột, tường chịu lực và setdown sàn.',status:'dang-lam',done:false,priority:'tinggi',category:'desain',assignee_id:'u-diep',assignee:'Diệp',reviewer_id:'u-an',reviewer:'AN',supporters:[{user_id:'u-tram',name:'Trâm'}],start_date:addDays(t,-7),due_date:addDays(t,-3),checklist:[{text:'Lưới trục và dim tổng',done:true},{text:'Cột và tường tầng 1',done:true},{text:'Setdown và opening sàn',done:false},{text:'Khung tên và revision',done:false}],project_id:'p1',created_at:t},
+    {id:'d2',team_id:'t-ptx',title:'PTX261008 45 Chapel St — chi tiết thép dầm',description:'',status:'dang-lam',done:false,priority:'tinggi',category:'desain',assignee_id:'u-tram',assignee:'Trâm',depends_on_id:'d1',start_date:addDays(t,-5),due_date:t,checklist:[{text:'Thép dầm chính',done:true},{text:'Thép đai và neo',done:false}],project_id:'p1',created_at:t},
+    {id:'d3',team_id:'t-ptx',title:'PTX261012 8 Lonsdale St — mô hình RAM Concept',description:'',status:'chua-lam',done:false,priority:'sedang',category:'kerja',assignee_id:'u-hong',assignee:'Hồng',depends_on_id:'d2',start_date:t,due_date:addDays(t,2),checklist:[],project_id:'p1',created_at:t},
     {id:'d4',team_id:'t-ptx',title:'Kiểm tra và đối chiếu bản vẽ PTA dự án College St với mô hình RAM Concept bản mới nhất',description:'',status:'dang-lam',done:false,priority:'tinggi',category:'riset',assignee_id:'u-an',assignee:'AN',start_date:addDays(t,-4),due_date:addDays(t,3),checklist:[],project_id:'p2',created_at:t},
     {id:'d5',team_id:'t-kc',title:'Bóc khối lượng thép sàn tầng 2',description:'',status:'chua-lam',done:false,priority:'sedang',category:'kerja',assignee_id:'u-minh',assignee:'Minh',start_date:addDays(t,1),due_date:addDays(t,4),checklist:[],project_id:'p2',created_at:t},
-    {id:'d6',team_id:'t-dt',title:'Báo giá vật tư dự án Phú Mỹ',description:'Chờ nhà cung cấp gửi bảng giá đợt 2.',status:'cho',done:false,priority:'rendah',category:'umum',assignee_id:'u-lan',assignee:'Lan',start_date:addDays(t,-3),due_date:addDays(t,1),checklist:[],project_id:null,created_at:t},
+    {id:'d6',team_id:'t-dt',title:'Báo giá vật tư dự án Phú Mỹ',description:'Chờ nhà cung cấp gửi bảng giá đợt 2.',status:'duyet',done:false,priority:'rendah',category:'umum',assignee_id:'u-lan',assignee:'Lan',start_date:addDays(t,-3),due_date:addDays(t,1),checklist:[],project_id:null,created_at:t},
     {id:'d7',team_id:'t-hc',title:'Họp giao ban tuần + cập nhật tiến độ',description:'',status:'xong',done:true,priority:'sedang',category:'umum',assignee_id:'u-thu',assignee:'Thu',start_date:t,due_date:t,checklist:[],project_id:null,created_at:t},
-    {id:'d8',team_id:'t-kc',title:'Vẽ chi tiết móng cọc — dự án khu dân cư phía Đông',description:'',status:'chua-lam',done:false,priority:'sedang',category:'desain',assignee_id:null,assignee:'',start_date:addDays(t,3),due_date:addDays(t,7),checklist:[],project_id:'p2',created_at:t},
+    {id:'d8',team_id:'t-kc',title:'Vẽ chi tiết móng cọc — dự án khu dân cư phía Đông',description:'',status:'chua-lam',done:false,priority:'sedang',category:'desain',assignee_id:null,assignee:'',depends_on_id:'d5',start_date:addDays(t,3),due_date:addDays(t,7),checklist:[],project_id:'p2',created_at:t},
     {id:'d9',team_id:'t-hc',title:'Duyệt hồ sơ thanh toán đợt 3',description:'',status:'xong',done:true,priority:'sedang',category:'umum',assignee_id:'u-thu',assignee:'Thu',start_date:addDays(t,-6),due_date:addDays(t,-2),checklist:[],project_id:null,created_at:t},
-    {id:'d10',team_id:'t-kc',title:'Cập nhật thư viện chi tiết thép chuẩn AS 3600',description:'',status:'chua-lam',done:false,priority:'rendah',category:'riset',assignee_id:'u-hung',assignee:'Hùng',start_date:addDays(t,7),due_date:addDays(t,18),checklist:[],project_id:null,created_at:t}
+    {id:'d10',team_id:'t-kc',title:'Cập nhật thư viện chi tiết thép chuẩn AS 3600',description:'',status:'chua-lam',done:false,priority:'rendah',category:'riset',assignee_id:'u-hung',assignee:'Hùng',depends_on_id:'d8',start_date:addDays(t,7),due_date:addDays(t,18),checklist:[],project_id:null,created_at:t}
   ];
 }
 const DEMO_PROJECTS=[
@@ -468,7 +477,7 @@ let user=null,teams=[],roster=[],tasks=[],projects=[];
 let curTeamId=null,searchQ='',projFilter='';
 const _man=new URLSearchParams(location.search).get('man');
 let curView=['kanban','gantt','lich','baocao'].includes(_man)?_man:'kanban';
-let hasStatus=true,calY,calM,drawerId=null,editingNew=false,teamCounts={},formRoster=[],lastRange=null;
+let hasStatus=true,hasDep=true,hasMig5=true,calY,calM,drawerId=null,editingNew=false,teamCounts={},formRoster=[],lastRange=null;
 (function(){const n=new Date();calY=n.getFullYear();calM=n.getMonth();})();
 const myRole=()=>{if(DEMO)return 'admin';const m=roster.find(r=>r.user_id===(user&&user.id));return m?m.role:'member'};
 
@@ -527,14 +536,22 @@ async function enterApp(){
 
 /* ---------- DATA ---------- */
 async function probeColumns(){
-  const r=await sb.from('tasks').select('status,start_date').limit(1);
-  hasStatus=!r.error;
+  const q1=await sb.from('tasks').select('status,start_date,depends_on_id,reviewer_id,supporters').limit(1);
+  if(!q1.error){hasStatus=true;hasDep=true;hasMig5=true}
+  else{
+    const q2=await sb.from('tasks').select('status,start_date,depends_on_id').limit(1);
+    if(!q2.error){hasStatus=true;hasDep=true;hasMig5=false}
+    else{
+      const q3=await sb.from('tasks').select('status,start_date').limit(1);
+      hasStatus=!q3.error;hasDep=false;hasMig5=false;
+    }
+  }
   el('mig-banner').style.display=hasStatus?'none':'flex';
 }
 async function loadAll(first){
   if(DEMO){
     teams=DEMO_TEAMS.slice();roster=DEMO_ROSTER.slice();tasks=demoTasks();projects=DEMO_PROJECTS.slice();
-    curTeamId=curTeamId||teams[0].id;hasStatus=true;
+    curTeamId=curTeamId||teams[0].id;hasStatus=true;hasDep=true;hasMig5=true;
     el('demo-banner').style.display='flex';
     el('me-name').textContent='Bản xem thử';el('me-av').textContent='X';el('me-line').textContent='Dữ liệu mẫu';
     renderAll();return;
@@ -601,9 +618,11 @@ function renderCurrentView(){
   if(curView==='lich')renderCal();
   if(curView==='baocao')renderReports();
 }
+function supportersOf(t){return Array.isArray(t.supporters)?t.supporters:[]}
 function cardHtml(t){
   const st=STATUS[statusOf(t)],od=isOverdue(t);
   const nm=personName(t),pc=pctOf(t),cl=checklistOf(t);
+  const dep=t.depends_on_id?(tasks.find(x=>x.id===t.depends_on_id)||{}).title:null;
   const pills=[];
   if(od)pills.push('<span class="pill red">Quá hạn '+diffDays(t.due_date,todayIso())+' ngày</span>');
   else if(isDueToday(t))pills.push('<span class="pill amber">Hạn hôm nay</span>');
@@ -614,6 +633,9 @@ function cardHtml(t){
     +'<div class="t">'+esc(t.title)+'</div>'
     +'<div class="meta">'+pills.join('')+'</div>'
     +(cl.length?'<div class="bar"><i style="width:'+pc+'%"></i></div><div class="small muted">'+cl.filter(x=>x.done).length+'/'+cl.length+' đầu việc · '+pc+'%</div>':'')
+    +(dep?'<div class="small muted">Sau: '+esc(dep)+'</div>':'')
+    +(t.reviewer?'<div class="small muted">Người duyệt: '+esc(t.reviewer)+'</div>':'')
+    +(supportersOf(t).length?'<div class="small muted">Hỗ trợ: '+esc(supportersOf(t).slice(0,2).map(s=>s.name).join(', '))+(supportersOf(t).length>2?' +'+(supportersOf(t).length-2):'')+'</div>':'')
     +'<div class="who">'+(nm?'<span class="av" style="background:'+pcolor(nm)+'">'+initials(nm)+'</span>'+esc(nm):'<span class="av" style="background:#8A7F72">?</span>Chưa giao')+' · '+esc((teams.find(x=>x.id===t.team_id)||{}).name||'')+'</div>'
     +'</article>';
 }
@@ -668,7 +690,84 @@ function renderGantt(){
   el('gantt-undated').querySelectorAll('[data-setdate]').forEach(b=>b.onclick=()=>updateTask(b.dataset.setdate,{start_date:todayIso(),due_date:addDays(todayIso(),3)}));
   el('gantt-wrap').querySelectorAll('.g-row').forEach(r=>r.onclick=()=>openDrawer(r.dataset.id));
   bindGanttDrag();
+  drawDepLines(list);
+  renderScurve(list);
+  el('dep-note').innerHTML=(!hasDep&&!DEMO)?'<p class="small muted dep-note">Muốn nối việc phụ thuộc: chạy migration 5 trong SQL Editor của Supabase (file supabase-migration-5.sql), rồi tải lại trang.</p>':'';
 }
+function barGeom(wrap,bar){
+  let x=0,y=0,n=bar;
+  while(n&&n!==wrap){x+=n.offsetLeft;y+=n.offsetTop;n=n.offsetParent}
+  return {x:x,y:y,w:bar.offsetWidth,h:bar.offsetHeight};
+}
+function drawDepLines(list){
+  const wrap=el('gantt-wrap');
+  const old=wrap.querySelector('.dep-svg');if(old)old.remove();
+  const pairs=list.filter(t=>t.depends_on_id);
+  if(!pairs.length)return;
+  let html='';
+  pairs.forEach(t=>{
+    const pb=wrap.querySelector('.gbar[data-id="'+t.depends_on_id+'"]');
+    const sb=wrap.querySelector('.gbar[data-id="'+t.id+'"]');
+    if(!pb||!sb)return;
+    const a=barGeom(wrap,pb),b=barGeom(wrap,sb);
+    const x1=a.x+a.w,y1=a.y+a.h/2,x2=b.x,y2=b.y+b.h/2;
+    const mx=x2>x1?(x1+x2)/2:x1+14;
+    html+='<path d="M'+x1+' '+y1+' H'+mx+' V'+y2+' H'+(x2-2)+'"/><polygon points="'+x2+','+y2+' '+(x2-7)+','+(y2-4)+' '+(x2-7)+','+(y2+4)+'"/>';
+  });
+  if(!html)return;
+  const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+  svg.setAttribute('class','dep-svg');
+  svg.innerHTML=html;
+  svg.setAttribute('width',wrap.scrollWidth);svg.setAttribute('height',wrap.scrollHeight);
+  svg.style.width=wrap.scrollWidth+'px';svg.style.height=wrap.scrollHeight+'px';
+  wrap.appendChild(svg);
+}
+function renderScurve(list){
+  const box=el('scurve-wrap');
+  const dated=list.filter(t=>t.start_date&&t.due_date);
+  if(dated.length<2||!lastRange){box.innerHTML='';return}
+  const mn=lastRange.mn,span=lastRange.span,td=todayIso();
+  const W=640,H=230,PL=36,PR=12,PT=14,PB=26,iw=W-PL-PR,ih=H-PT-PB;
+  const pts=[];
+  for(let i=0;i<span;i++){
+    const d=addDays(mn,i);
+    let plan=0,act=0;
+    dated.forEach(tk=>{
+      const s=tk.start_date,e=tk.due_date;
+      const total=diffDays(s,e)+1,daysIn=diffDays(s,d)+1;
+      let pp=0;if(d>=s)pp=d>=e?100:Math.round(100*daysIn/total);
+      let ap=0;const cur=pctOf(tk);
+      if(d>=s){
+        if(d>=td)ap=cur;
+        else{const tot2=Math.max(1,diffDays(s,td)+1);ap=Math.round(cur*Math.min(1,daysIn/tot2))}
+      }
+      plan+=pp;act+=ap;
+    });
+    const x=PL+(span>1?iw*i/(span-1):iw/2);
+    pts.push({x:x,py:PT+ih*(1-plan/dated.length/100),ay:PT+ih*(1-act/dated.length/100)});
+  }
+  const path=pts.map((p,i)=>(i?'L':'M')+p.x.toFixed(1)+' '+p.py.toFixed(1)).join(' ');
+  const pathA=pts.map((p,i)=>(i?'L':'M')+p.x.toFixed(1)+' '+p.ay.toFixed(1)).join(' ');
+  let grid='';
+  [0,25,50,75,100].forEach(v=>{const y=PT+ih*(1-v/100);grid+='<line x1="'+PL+'" y1="'+y+'" x2="'+(W-PR)+'" y2="'+y+'" stroke="#EFE9DB"/><text x="'+(PL-6)+'" y="'+(y+4)+'" font-size="10" fill="#8A7F72" text-anchor="end">'+v+'%</text>'});
+  const ti=diffDays(mn,td)>=0&&diffDays(mn,td)<span?PL+iw*diffDays(mn,td)/Math.max(1,span-1):null;
+  box.innerHTML='<div class="card scurve"><h3>Đường cong S — kế hoạch và thực tế ('+dated.length+' việc có ngày)</h3>'
+    +'<svg viewBox="0 0 '+W+' '+H+'" role="img">'
+    +grid
+    +(ti!==null?'<line x1="'+ti+'" y1="'+PT+'" x2="'+ti+'" y2="'+(PT+ih)+'" stroke="#C2410C" stroke-dasharray="4 3"/><text x="'+ti+'" y="'+(PT+ih+16)+'" font-size="10" fill="#C2410C" text-anchor="middle">Hôm nay</text>':'')
+    +'<path d="'+path+'" fill="none" stroke="#0B5B55" stroke-width="2" stroke-dasharray="5 3"/>'
+    +'<path d="'+pathA+'" fill="none" stroke="#B45309" stroke-width="2"/>'
+    +'<text x="'+PL+'" y="'+(H-6)+'" font-size="10" fill="#8A7F72">'+fmtD(mn)+'</text>'
+    +'<text x="'+(W-PR)+'" y="'+(H-6)+'" font-size="10" fill="#8A7F72" text-anchor="end">'+fmtD(addDays(mn,span-1))+'</text>'
+    +'</svg>'
+    +'<div class="lg"><span><i style="display:inline-block;width:18px;border-top:2px dashed #0B5B55;vertical-align:middle"></i> Kế hoạch</span><span><i style="display:inline-block;width:18px;border-top:2px solid #B45309;vertical-align:middle"></i> Thực tế (ước lượng)</span></div>'
+    +'<p class="small muted">Kế hoạch trải đều từ ngày bắt đầu tới hạn giao. Thực tế ước lượng từ % hoàn thành hiện tại, trải đều từ ngày bắt đầu tới hôm nay. Việc chưa có đủ ngày không tính vào đường cong.</p></div>';
+}
+window.addEventListener('resize',()=>{
+  if(curView==='gantt'&&el('gantt-wrap').querySelector('.gbar')){
+    drawDepLines(visibleTasks().filter(t=>t.start_date||t.due_date));
+  }
+});
 function renderCal(){
   const first=new Date(calY,calM,1);
   const startDow=(first.getDay()+6)%7;
@@ -792,6 +891,8 @@ function bindGanttDrag(){
 /* ----- CRUD ----- */
 function syncPatch(patch){
   const p={...patch};
+  if(!hasDep)delete p.depends_on_id;
+  if(!hasMig5){delete p.reviewer_id;delete p.reviewer;delete p.supporters}
   if(!hasStatus){
     if(p.status){
       if(p.status!=='xong'&&p.status!=='chua-lam'){toast('Chạy migration 4 để lưu trạng thái “'+STATUS[p.status].label+'” nhé.');return null}
@@ -849,6 +950,10 @@ function openDrawer(id){
   const t=tasks.find(x=>x.id===id);if(!t)return;
   drawerId=id;drawerChecklist=checklistOf(t).map(c=>({...c}));
   el('drawer-title').textContent=t.title;
+  const depOpts=tasks.filter(x=>x.team_id===t.team_id&&x.id!==t.id).map(x=>'<option value="'+x.id+'"'+(t.depends_on_id===x.id?' selected':'')+'>'+esc(x.title)+'</option>').join('');
+  const depRow=(hasDep||DEMO)?'<label class="f">Làm sau khi xong việc<select class="inp" id="d-dep" style="width:100%"><option value="">Không phụ thuộc việc nào</option>'+depOpts+'</select></label>':'<p class="small muted">Chạy migration 5 để dùng việc phụ thuộc (cột depends_on_id).</p>';
+  const revRow=(hasMig5||DEMO)?'<label class="f">Người duyệt<select class="inp" id="d-reviewer" style="width:100%">'+assigneeOptions(t.reviewer_id)+'</select></label>':'<p class="small muted">Chạy migration 5 để có người duyệt và người hỗ trợ.</p>';
+  const supRows=(hasMig5||DEMO)?roster.filter(m=>m.user_id!==t.assignee_id).map(m=>'<label class="ckline"><input type="checkbox" data-sup="'+m.user_id+'"'+(supportersOf(t).some(s=>s.user_id===m.user_id)?' checked':'')+'><span>'+esc(m.name||m.email)+'</span></label>').join(''):'';
   el('drawer-body').innerHTML=
     '<label class="f">Tiêu đề<input class="inp" id="d-title" value="'+esc(t.title)+'"></label>'
     +'<div class="frow"><label class="f">Trạng thái<select class="inp" id="d-status" style="width:100%">'+Object.keys(STATUS).map(k=>'<option value="'+k+'"'+(statusOf(t)===k?' selected':'')+'>'+STATUS[k].label+'</option>').join('')+'</select></label>'
@@ -857,10 +962,13 @@ function openDrawer(id){
     +'<label class="f">Dự án<select class="inp" id="d-project" style="width:100%">'+projectOptions(t.project_id)+'</select></label></div>'
     +'<div class="frow"><label class="f">Ngày bắt đầu<input class="inp" id="d-start" type="date" value="'+(t.start_date||'')+'"></label>'
     +'<label class="f">Hạn giao<input class="inp" id="d-due" type="date" value="'+(t.due_date||'')+'"></label></div>'
-    +'<label class="f">Loại<select class="inp" id="d-category" style="width:100%">'+Object.keys(CATL).map(k=>'<option value="'+k+'"'+(t.category===k?' selected':'')+'>'+CATL[k]+'</option>').join('')+'</select></label>'
+    +depRow
+    +'<div class="frow">'+revRow
+    +'<label class="f">Loại<select class="inp" id="d-category" style="width:100%">'+Object.keys(CATL).map(k=>'<option value="'+k+'"'+(t.category===k?' selected':'')+'>'+CATL[k]+'</option>').join('')+'</select></label></div>'
     +'<label class="f">Mô tả<textarea class="inp" id="d-desc" rows="3">'+esc(t.description||'')+'</textarea></label>'
     +'<div><h3 style="margin-bottom:4px">Checklist</h3><div id="d-checklist"></div>'
     +'<div style="display:flex;gap:8px;margin-top:8px"><input class="inp" id="d-new-check" placeholder="Thêm đầu việc…"><button class="btn" id="d-add-check" type="button">Thêm</button></div></div>'
+    +((hasMig5||DEMO)?'<div><h3 style="margin-bottom:4px">Người hỗ trợ</h3>'+(supRows||'<p class="small muted">Chưa có ai trong đội để chọn.</p>')+'</div>':'')
     +'<p class="small muted">Người phụ trách: '+esc(personName(t)||'chưa giao')+' · '+(isOverdue(t)?'Quá hạn '+diffDays(t.due_date,todayIso())+' ngày':t.due_date?'Hạn '+fmtD2(t.due_date):'Chưa đặt hạn')+'</p>';
   renderDrawerChecklist();
   el('d-add-check').onclick=()=>{
@@ -879,7 +987,7 @@ el('btn-save-drawer').onclick=async()=>{
   const t=tasks.find(x=>x.id===drawerId);if(!t)return;
   const aid=el('d-assignee').value;
   const m=roster.find(r=>r.user_id===aid);
-  const ok=await updateTask(t.id,{
+  const patch={
     title:el('d-title').value.trim()||t.title,
     status:el('d-status').value,priority:el('d-priority').value,
     assignee_id:aid||null,assignee:m?(m.name||m.email):'',
@@ -887,7 +995,13 @@ el('btn-save-drawer').onclick=async()=>{
     start_date:el('d-start').value||null,due_date:el('d-due').value||null,
     category:el('d-category').value,description:el('d-desc').value,
     checklist:drawerChecklist
-  });
+  };
+  const depSel=el('d-dep');if(depSel)patch.depends_on_id=depSel.value||null;
+  const revSel=el('d-reviewer');
+  if(revSel){const rv=revSel.value,rm=roster.find(r=>r.user_id===rv);patch.reviewer_id=rv||null;patch.reviewer=rm?(rm.name||rm.email):''}
+  const supBoxes=el('drawer-body').querySelectorAll('[data-sup]');
+  if(supBoxes.length)patch.supporters=[...el('drawer-body').querySelectorAll('[data-sup]:checked')].map(cb=>{const sm=roster.find(r=>r.user_id===cb.dataset.sup);return{user_id:cb.dataset.sup,name:sm?(sm.name||sm.email):''}});
+  const ok=await updateTask(t.id,patch);
   if(ok){closeDrawer();toast('Đã lưu.')}
 };
 el('btn-delete-drawer').onclick=()=>{
@@ -1101,7 +1215,7 @@ el('btn-export').onclick=()=>{
   a.download='taskflow-bao-cao-'+todayIso()+'.csv';a.click();URL.revokeObjectURL(a.href);
   toast('Đã xuất '+list.length+' việc ra file CSV.');
 };
-const MIG_SQL="alter table tasks add column if not exists status text not null default 'chua-lam' check (status in ('chua-lam','dang-lam','cho','xong'));\nalter table tasks add column if not exists start_date date;\nupdate tasks set status = 'xong' where done = true and status = 'chua-lam';";
+const MIG_SQL="alter table tasks add column if not exists status text not null default 'chua-lam' check (status in ('chua-lam','dang-lam','duyet','xong'));\nalter table tasks add column if not exists start_date date;\nupdate tasks set status = 'xong' where done = true and status = 'chua-lam';";
 el('btn-copy-mig').onclick=async()=>{try{await navigator.clipboard.writeText(MIG_SQL);toast('Đã chép SQL migration 4.')}catch(e){toast('Không chép được, xem SQL trong khung trên nhé.')}};
 el('btn-logout').onclick=async()=>{
   if(DEMO){location.href=location.pathname;return}
